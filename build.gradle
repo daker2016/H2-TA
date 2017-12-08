@@ -2,6 +2,16 @@ group 'Johnson'
 version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
+apply plugin: 'com.google.osdetector'
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.google.gradle:osdetector-gradle-plugin:1.4.0'
+    }
+}
 
 sourceCompatibility = 1.8
 
@@ -11,6 +21,8 @@ repositories {
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
-    compile group: 'io.netty', name: 'netty-all', version: '4.1.17.Final'
-    compile group: 'io.netty', name: 'netty-example', version: '4.1.17.Final'
+    compile(group: 'io.netty', name: 'netty-all', version: '4.1.17.Final')
+    compile(group: 'io.netty', name: 'netty-example', version: '4.1.17.Final') {
+        exclude group: 'io.netty', module: "netty-tcnative"
+    }
 }
