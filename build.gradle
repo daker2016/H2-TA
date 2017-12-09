@@ -25,4 +25,6 @@ dependencies {
     compile(group: 'io.netty', name: 'netty-example', version: '4.1.17.Final') {
         exclude group: 'io.netty', module: "netty-tcnative"
     }
+//    compile group: 'io.netty', name: 'netty-tcnative', version: '2.0.7.Final-osx-x86_64'
+    compile 'io.netty:netty-tcnative:2.0.7.Final:' + osdetector.classifier
 }
