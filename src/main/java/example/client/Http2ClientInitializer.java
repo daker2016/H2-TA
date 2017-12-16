@@ -25,6 +25,10 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.SslContext;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import static example.Parameters.CLIENT_ENABLE_HTTP2;
 import static io.netty.handler.logging.LogLevel.INFO;
 
 /**
@@ -38,10 +42,15 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
     private HttpToHttp2ConnectionHandler connectionHandler;
     private HttpResponseHandler responseHandler;
     private Http2SettingsHandler settingsHandler;
+    private CountDownLatch latch = new CountDownLatch(1);
 
     public Http2ClientInitializer(SslContext sslCtx, int maxContentLength) {
         this.sslCtx = sslCtx;
         this.maxContentLength = maxContentLength;
+    }
+
+    public void awaitHandshake(long timeout, TimeUnit timeUnit) throws Exception {
+        latch.await(timeout, timeUnit);
     }
 
     @Override
@@ -94,6 +103,10 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
                     p.addLast(connectionHandler);
                     configureEndOfPipeline(p);
                     return;
+                } else if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
+                    ch.pipeline().addLast(new HttpClientCodec(), responseHandler);
+                    latch.countDown();
+                    return;
                 }
                 ctx.close();
                 throw new IllegalStateException("unknown protocol: " + protocol);
@@ -109,10 +122,24 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
         Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(connectionHandler);
         HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 65536);
 
-        ch.pipeline().addLast(sourceCodec,
-                              upgradeHandler,
-                              new UpgradeRequestHandler(),
-                              new UserEventLogger());
+        ch.pipeline().addLast(sourceCodec);
+        if (CLIENT_ENABLE_HTTP2) {
+            ch.pipeline().addLast(upgradeHandler, new UpgradeRequestHandler());
+        } else {
+            ch.pipeline().addLast(responseHandler);
+        }
+        ch.pipeline().addLast(new UserEventLogger());
+    }
+
+    /**
+     * Class that logs any User Events triggered on this channel.
+     */
+    private static class UserEventLogger extends ChannelInboundHandlerAdapter {
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            System.out.println("User Event Triggered: " + evt);
+            ctx.fireUserEventTriggered(evt);
+        }
     }
 
     /**
@@ -131,17 +158,6 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
             ctx.pipeline().remove(this);
 
             configureEndOfPipeline(ctx.pipeline());
-        }
-    }
-
-    /**
-     * Class that logs any User Events triggered on this channel.
-     */
-    private static class UserEventLogger extends ChannelInboundHandlerAdapter {
-        @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-            System.out.println("User Event Triggered: " + evt);
-            ctx.fireUserEventTriggered(evt);
         }
     }
 }

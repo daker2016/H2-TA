@@ -19,7 +19,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -29,6 +29,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+
+import static example.Parameters.CLIENT_ENABLE_HTTP2;
 
 /**
  * Process {@link FullHttpResponse} translated from HTTP/2 frames
@@ -46,9 +48,9 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
     /**
      * Create an association between an anticipated response stream id and a {@link ChannelPromise}
      *
-     * @param streamId The stream for which a response is expected
+     * @param streamId    The stream for which a response is expected
      * @param writeFuture A future that represent the request write operation
-     * @param promise The promise object that will be used to wait/notify events
+     * @param promise     The promise object that will be used to wait/notify events
      * @return The previous object associated with {@code streamId}
      * @see HttpResponseHandler#awaitResponses(long, TimeUnit)
      */
@@ -60,7 +62,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
      * Wait (sequentially) for a time duration for each anticipated response
      *
      * @param timeout Value of time to wait for each response
-     * @param unit Units associated with {@code timeout}
+     * @param unit    Units associated with {@code timeout}
      * @see HttpResponseHandler#put(int, ChannelFuture, ChannelPromise)
      */
     public void awaitResponses(long timeout, TimeUnit unit) {
@@ -88,6 +90,7 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
+        System.out.println(123);
         Integer streamId = msg.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
         if (streamId == null) {
             System.err.println("HttpResponseHandler unexpected message received: " + msg);
@@ -109,5 +112,27 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
 
             entry.getValue().setSuccess();
         }
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (!CLIENT_ENABLE_HTTP2) {
+            if (msg instanceof DefaultHttpResponse) {
+                HttpResponse response = (HttpResponse) msg;
+                int streamId = response.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
+                Entry<ChannelFuture, ChannelPromise> entry = streamidPromiseMap.get(streamId);
+                if (entry == null) {
+                    System.err.println("Message received for unknown stream id " + streamId);
+                } else {
+                    entry.getValue().setSuccess();
+                }
+            } else if (msg instanceof LastHttpContent) {
+                HttpContent content = (HttpContent) msg;
+                byte[] arr = new byte[content.content().readableBytes()];
+                content.content().readBytes(arr);
+                System.out.println(new String(arr, 0, arr.length, CharsetUtil.UTF_8));
+            }
+        }
+        super.channelRead(ctx, msg);
     }
 }

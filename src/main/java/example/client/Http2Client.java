@@ -34,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 
 import static example.Parameters.*;
 import static io.netty.handler.codec.http.HttpMethod.GET;
-import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
@@ -50,6 +49,12 @@ public final class Http2Client {
         final SslContext sslCtx;
         if (SSL) {
             SslProvider provider = OpenSsl.isAlpnSupported() ? SslProvider.OPENSSL : SslProvider.JDK;
+            String[] supportedProtocols;
+            if (CLIENT_ENABLE_HTTP2) {
+                supportedProtocols = new String[]{ApplicationProtocolNames.HTTP_2, ApplicationProtocolNames.HTTP_1_1};
+            } else {
+                supportedProtocols = new String[]{ApplicationProtocolNames.HTTP_1_1};
+            }
             sslCtx = SslContextBuilder.forClient()
                     .sslProvider(provider)
                     /* NOTE: the cipher filter may not include all ciphers required by the HTTP/2 specification.
@@ -62,8 +67,7 @@ public final class Http2Client {
                             SelectorFailureBehavior.NO_ADVERTISE,
                             // ACCEPT is currently the only mode supported by both OpenSsl and JDK providers.
                             SelectedListenerFailureBehavior.ACCEPT,
-                            ApplicationProtocolNames.HTTP_2,
-                            ApplicationProtocolNames.HTTP_1_1))
+                            supportedProtocols))
                     .build();
         } else {
             sslCtx = null;
@@ -85,9 +89,13 @@ public final class Http2Client {
             Channel channel = b.connect().syncUninterruptibly().channel();
             System.out.println("Connected to [" + SERVER_HOST + ':' + PORT + ']');
 
-            // Wait for the HTTP/2 upgrade to occur.
-            Http2SettingsHandler http2SettingsHandler = initializer.settingsHandler();
-            http2SettingsHandler.awaitSettings(5, TimeUnit.SECONDS);
+//             Wait for the HTTP/2 upgrade to occur.
+            if (CLIENT_ENABLE_HTTP2) {
+                Http2SettingsHandler http2SettingsHandler = initializer.settingsHandler();
+                http2SettingsHandler.awaitSettings(5, TimeUnit.SECONDS);
+            } else {
+                initializer.awaitHandshake(5, TimeUnit.SECONDS);
+            }
 
             HttpResponseHandler responseHandler = initializer.responseHandler();
             int streamId = 3;
@@ -97,24 +105,35 @@ public final class Http2Client {
 
             // Create a simple GET request.
             FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, SERVER_URL);
+            request.headers().set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), streamId);
             request.headers().add(HttpHeaderNames.HOST, hostName);
             request.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), scheme.name());
             request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
             request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.DEFLATE);
             responseHandler.put(streamId, channel.write(request), channel.newPromise());
 
-            streamId += 2;
+            /*streamId += 2;
             request = new DefaultFullHttpRequest(HTTP_1_1, POST, SERVER_URL);
             request.headers().add(HttpHeaderNames.HOST, hostName);
             request.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), scheme.name());
             request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
             request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.DEFLATE);
-            responseHandler.put(streamId, channel.write(request), channel.newPromise());
+            responseHandler.put(streamId, channel.write(request), channel.newPromise());*/
+            // -------------------------------------------------------------
+            // Instruction: send a HTTP POST request to the server
+            //   1. increase streamId by 2
+            //   2. Build a POST request like the GET request, but change GET to POST when constructing.
 
+
+            // -------------------------------------------------------------
 
             channel.flush();
             responseHandler.awaitResponses(5, TimeUnit.SECONDS);
-            System.out.println("Finished HTTP/2 request(s)");
+            if (CLIENT_ENABLE_HTTP2) {
+                System.out.println("Finished HTTP/2 request(s)");
+            } else {
+                System.out.println("Finished HTTP/1.x request(s)");
+            }
 
             // Wait until the connection is closed.
             channel.close().syncUninterruptibly();

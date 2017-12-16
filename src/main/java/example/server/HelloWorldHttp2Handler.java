@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
@@ -92,7 +93,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     }
 
     private void sendFileResponse(ChannelHandlerContext ctx, int streamId, URL url) {
-        try {
+        /*try {
             byte[] bytes = Files.readAllBytes(Paths.get(url.toURI()));
             ByteBuf buf = Unpooled.wrappedBuffer(bytes);
             Http2Headers headers = new DefaultHttp2Headers().status(OK.codeAsText());
@@ -100,7 +101,19 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
             encoder().writeData(ctx, streamId, buf, 0, true, ctx.newPromise());
         } catch (URISyntaxException | IOException e) {
             e.printStackTrace();
-        }
+        }*/
+
+        // -----------------------------------------------
+        // Instructions: read the file from resource and send it to the client
+        // 1. Get the path from request URL
+        // 2. Read the resource file according to the path
+        // 3. Construct the response based on the file content
+        // 4. Write back the response
+
+
+
+
+        // -----------------------------------------------
     }
 
     @Override
@@ -120,7 +133,15 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
             System.out.println(path);
 
             URL url = getClass().getClassLoader().getResource(path);
-            if (url != null) {
+            Path filePath = null;
+            try {
+                if (url != null) {
+                    filePath = Paths.get(url.toURI());
+                }
+            } catch (URISyntaxException e) {
+                e.printStackTrace();
+            }
+            if (filePath != null && Files.exists(filePath) && Files.isRegularFile(filePath)) {
                 sendFileResponse(ctx, streamId, url);
             } else {
                 ByteBuf content = ctx.alloc().buffer();

@@ -21,6 +21,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http2.HttpConversionUtil;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
@@ -43,6 +44,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
         if (HttpUtil.is100ContinueExpected(req)) {
             ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
         }
+        int streamId = req.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
         boolean keepAlive = HttpUtil.isKeepAlive(req);
 
         ByteBuf content = ctx.alloc().buffer();
@@ -50,6 +52,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
         ByteBufUtil.writeAscii(content, " - via " + req.protocolVersion() + " (" + establishApproach + ")");
 
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
+        response.headers().set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), streamId);
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
         response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
 
