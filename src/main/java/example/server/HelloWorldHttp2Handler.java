@@ -17,13 +17,21 @@ package example.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http2.*;
 import io.netty.util.CharsetUtil;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 
 /**
@@ -59,7 +67,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
         if (evt instanceof HttpServerUpgradeHandler.UpgradeEvent) {
             HttpServerUpgradeHandler.UpgradeEvent upgradeEvent =
                     (HttpServerUpgradeHandler.UpgradeEvent) evt;
-            onHeadersRead(ctx, 1, http1HeadersToHttp2Headers(upgradeEvent.upgradeRequest()), 0 , true);
+            onHeadersRead(ctx, 1, http1HeadersToHttp2Headers(upgradeEvent.upgradeRequest()), 0, true);
         }
         super.userEventTriggered(ctx, evt);
     }
@@ -76,11 +84,23 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
      */
     private void sendResponse(ChannelHandlerContext ctx, int streamId, ByteBuf payload) {
         // Send a frame for the response status
-        Http2Headers headers = new DefaultHttp2Headers().status(OK.codeAsText());
+        Http2Headers headers = new DefaultHttp2Headers().status(NOT_FOUND.codeAsText());
         encoder().writeHeaders(ctx, streamId, headers, 0, false, ctx.newPromise());
         encoder().writeData(ctx, streamId, payload, 0, true, ctx.newPromise());
 
         // no need to call flush as channelReadComplete(...) will take care of it.
+    }
+
+    private void sendFileResponse(ChannelHandlerContext ctx, int streamId, URL url) {
+        try {
+            byte[] bytes = Files.readAllBytes(Paths.get(url.toURI()));
+            ByteBuf buf = Unpooled.wrappedBuffer(bytes);
+            Http2Headers headers = new DefaultHttp2Headers().status(OK.codeAsText());
+            encoder().writeHeaders(ctx, streamId, headers, 0, false, ctx.newPromise());
+            encoder().writeData(ctx, streamId, buf, 0, true, ctx.newPromise());
+        } catch (URISyntaxException | IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -96,10 +116,19 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId,
                               Http2Headers headers, int padding, boolean endOfStream) {
         if (endOfStream) {
-            ByteBuf content = ctx.alloc().buffer();
-            content.writeBytes(RESPONSE_BYTES.duplicate());
-            ByteBufUtil.writeAscii(content, " - via HTTP/2");
-            sendResponse(ctx, streamId, content);
+            String path = headers.path().toString().substring(1);
+            System.out.println(path);
+
+            URL url = getClass().getClassLoader().getResource(path);
+            if (url != null) {
+                sendFileResponse(ctx, streamId, url);
+            } else {
+                ByteBuf content = ctx.alloc().buffer();
+                content.writeBytes(RESPONSE_BYTES.duplicate());
+                ByteBufUtil.writeAscii(content, " - via HTTP/2");
+                sendResponse(ctx, streamId, content);
+            }
+
         }
     }
 
