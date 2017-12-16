@@ -1,8 +1,8 @@
-Install
+Get the code
 ===
-
-To set up the development environment, you should install java and some dependencies for the project. And a good IDE will help you code efficiently, we suggest [Intellij](https://www.jetbrains.com/idea/).
-
+```bash
+git clone https://github.com/johnson-li/H2-TA.git
+```
 
 Install JDK
 ===
@@ -19,20 +19,35 @@ HTTP/2 requires some encryption algorithms that is not included in Java. There a
  - Native way
     
     Install `openssl` & `libapr-1`
+    
+    - For MaxOS
+    ```bash
+    brew install apr-util openssl
+    ```
+    - For Linux
+    ```bash
+    apt-get install libssl-dev libapr1-dev
+    ```
      
- - JDK way 
- 
-    Add alpn boot jar to the Java boot classpath. See instructions in 
-    https://www.eclipse.org/jetty/documentation/current/alpn-chapter.html
+ - Java way 
+    The detailed instruction is located [here](https://www.eclipse.org/jetty/documentation/current/alpn-chapter.html). 
+    Briefly, you should 
+    1. Download the corresponding ALPN according to your JDK version. All of the ALPN jars are available in the [maven repository](https://mvnrepository.com/artifact/org.mortbay.jetty.alpn/alpn-boot).
+    I.E. if your JDK version is 1.8.0u152, please use the ALPN version 8.1.11.v20170118
+    2. Add the ALPN jar to your boot classpath. The command is like:
+    ```bash
+    java -Xbootclasspath/p:<path_to_alpn_boot_jar> ...
+    ```
+                               
 
 
-Work with Intellij
+IDE
 ===
+A good IDE can help you work efficiently, we suggest using [Intellij](https://www.jetbrains.com/idea/).
+
+If you are using the Java way of ALPN, you should edit run configurations and set the programme arguments.
+![arguments](docs/images/configurations.png)
 
 ### Import project
 File -> Open -> Choose /path/of/h2-ta/build.gradle -> Choose 'Open as Project'
 
-
-Work with terminal
-===
-Run `./gradlew build` in the project root directory to build it.
