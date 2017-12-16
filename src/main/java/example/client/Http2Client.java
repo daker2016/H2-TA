@@ -103,7 +103,7 @@ public final class Http2Client {
             request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.DEFLATE);
             responseHandler.put(streamId, channel.write(request), channel.newPromise());
 
-            streamId += 5;
+            streamId += 2;
             request = new DefaultFullHttpRequest(HTTP_1_1, POST, SERVER_URL);
             request.headers().add(HttpHeaderNames.HOST, hostName);
             request.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), scheme.name());
