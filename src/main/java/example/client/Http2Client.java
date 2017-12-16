@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 
 import static example.Parameters.*;
 import static io.netty.handler.codec.http.HttpMethod.GET;
+import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
@@ -101,6 +102,15 @@ public final class Http2Client {
             request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
             request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.DEFLATE);
             responseHandler.put(streamId, channel.write(request), channel.newPromise());
+
+            streamId += 5;
+            request = new DefaultFullHttpRequest(HTTP_1_1, POST, SERVER_URL);
+            request.headers().add(HttpHeaderNames.HOST, hostName);
+            request.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), scheme.name());
+            request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
+            request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.DEFLATE);
+            responseHandler.put(streamId, channel.write(request), channel.newPromise());
+
 
             channel.flush();
             responseHandler.awaitResponses(5, TimeUnit.SECONDS);
