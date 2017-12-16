@@ -14,7 +14,7 @@ https://www3.ntu.edu.sg/home/ehchua/programming/howto/JDK_Howto.html
 For ALPN
 ===
 HTTP/2 requires some encryption algorithms that is not included in Java. There are two ways to add such component. The detailed guide is on 
- https://netty.io/wiki/forked-tomcat-native.html. Briefly, the solution either the native way or the Java way.
+ https://netty.io/wiki/forked-tomcat-native.html. Briefly, the solution is either the native way or the Java way.
 
  - Native way
     
@@ -30,6 +30,7 @@ HTTP/2 requires some encryption algorithms that is not included in Java. There a
     ```
      
  - Java way 
+ 
     The detailed instruction is located [here](https://www.eclipse.org/jetty/documentation/current/alpn-chapter.html). 
     Briefly, you should 
     1. Download the corresponding ALPN according to your JDK version. All of the ALPN jars are available in the [maven repository](https://mvnrepository.com/artifact/org.mortbay.jetty.alpn/alpn-boot).
