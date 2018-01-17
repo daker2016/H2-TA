@@ -23,6 +23,13 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import static io.netty.handler.codec.http.HttpHeaderNames.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
@@ -44,16 +51,44 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
         if (HttpUtil.is100ContinueExpected(req)) {
             ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
         }
-        int streamId = req.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
+        int streamId = 0;
+        if (req.headers().contains(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text())) {
+            req.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
+        }
         boolean keepAlive = HttpUtil.isKeepAlive(req);
 
-        ByteBuf content = ctx.alloc().buffer();
-        content.writeBytes(HelloWorldHttp2Handler.RESPONSE_BYTES.duplicate());
-        ByteBufUtil.writeAscii(content, " - via " + req.protocolVersion() + " (" + establishApproach + ")");
+        String path = req.uri().substring(1);
+        URL url = getClass().getClassLoader().getResource(path);
+        Path filePath = null;
+        try {
+            if (url != null) {
+                filePath = Paths.get(url.toURI());
+            }
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
 
+        ByteBuf content = ctx.alloc().buffer();
+        boolean html = false;
+        if (filePath != null && Files.exists(filePath) && Files.isRegularFile(filePath)) {
+            html = true;
+            try {
+                byte[] bytes = Files.readAllBytes(Paths.get(url.toURI()));
+                content.writeBytes(bytes);
+            } catch (URISyntaxException | IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            content.writeBytes(HelloWorldHttp2Handler.RESPONSE_BYTES.duplicate());
+            ByteBufUtil.writeAscii(content, " - via " + req.protocolVersion() + " (" + establishApproach + ")");
+        }
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
         response.headers().set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), streamId);
-        response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
+        if (html) {
+            response.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
+        } else {
+            response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
+        }
         response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
 
         if (!keepAlive) {

@@ -93,7 +93,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
     }
 
     private void sendFileResponse(ChannelHandlerContext ctx, int streamId, URL url) {
-        /*try {
+        try {
             byte[] bytes = Files.readAllBytes(Paths.get(url.toURI()));
             ByteBuf buf = Unpooled.wrappedBuffer(bytes);
             Http2Headers headers = new DefaultHttp2Headers().status(OK.codeAsText());
@@ -101,19 +101,7 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
             encoder().writeData(ctx, streamId, buf, 0, true, ctx.newPromise());
         } catch (URISyntaxException | IOException e) {
             e.printStackTrace();
-        }*/
-
-        // -----------------------------------------------
-        // Instructions: read the file from resource and send it to the client
-        // 1. Get the path from request URL
-        // 2. Read the resource file according to the path
-        // 3. Construct the response based on the file content
-        // 4. Write back the response
-
-
-
-
-        // -----------------------------------------------
+        }
     }
 
     @Override
@@ -130,7 +118,6 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
                               Http2Headers headers, int padding, boolean endOfStream) {
         if (endOfStream) {
             String path = headers.path().toString().substring(1);
-            System.out.println(path);
 
             URL url = getClass().getClassLoader().getResource(path);
             Path filePath = null;

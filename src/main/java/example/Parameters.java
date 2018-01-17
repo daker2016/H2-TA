@@ -9,5 +9,6 @@ public class Parameters {
     public static final int PORT = 8443;
     public static final String SERVER_HOST = "localhost";
     public static final String SERVER_URL = "/";
-    public static final boolean CLIENT_ENABLE_HTTP2 = false; // If true, the client talks HTTP/2, other wise HTTP/1.x
+    public static final boolean CLIENT_ENABLE_HTTP2 = true; // If true, the client talks HTTP/2, other wise HTTP/1.x
+    public static final boolean SERVER_ENABLE_HTTP2 = true; // If true, the server talks HTTP/2, other wise HTTP/1.x
 }
