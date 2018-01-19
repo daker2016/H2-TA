@@ -51,7 +51,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
         if (HttpUtil.is100ContinueExpected(req)) {
             ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
         }
-        int streamId = 0;
+        int streamId = 3;
         if (req.headers().contains(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text())) {
             req.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
         }

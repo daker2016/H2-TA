@@ -112,21 +112,6 @@ public final class Http2Client {
             request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.DEFLATE);
             responseHandler.put(streamId, channel.write(request), channel.newPromise());
 
-            /*streamId += 2;
-            request = new DefaultFullHttpRequest(HTTP_1_1, POST, SERVER_URL);
-            request.headers().add(HttpHeaderNames.HOST, hostName);
-            request.headers().add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), scheme.name());
-            request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
-            request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.DEFLATE);
-            responseHandler.put(streamId, channel.write(request), channel.newPromise());*/
-            // -------------------------------------------------------------
-            // Instruction: send a HTTP POST request to the server
-            //   1. increase streamId by 2
-            //   2. Build a POST request like the GET request, but change GET to POST when constructing.
-
-
-            // -------------------------------------------------------------
-
             channel.flush();
             responseHandler.awaitResponses(5, TimeUnit.SECONDS);
             if (CLIENT_ENABLE_HTTP2) {

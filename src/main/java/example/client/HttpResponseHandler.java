@@ -118,7 +118,10 @@ public class HttpResponseHandler extends SimpleChannelInboundHandler<FullHttpRes
         if (!CLIENT_ENABLE_HTTP2) {
             if (msg instanceof DefaultHttpResponse) {
                 HttpResponse response = (HttpResponse) msg;
-                int streamId = response.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
+                int streamId = 3;
+                if (response.headers().contains(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text())) {
+                    streamId = response.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
+                }
                 Entry<ChannelFuture, ChannelPromise> entry = streamidPromiseMap.get(streamId);
                 if (entry == null) {
                     System.err.println("Message received for unknown stream id " + streamId);
