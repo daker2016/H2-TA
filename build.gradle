@@ -16,12 +16,13 @@ buildscript {
 sourceCompatibility = 1.8
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
-    compile(group: 'io.netty', name: 'netty-all', version: '4.1.17.Final')
+    compile(group: 'io.netty', name: 'netty-codec-http2', version: '4.1.17.Final')
     compile(group: 'io.netty', name: 'netty-example', version: '4.1.17.Final') {
         exclude group: 'io.netty', module: "netty-tcnative"
     }
