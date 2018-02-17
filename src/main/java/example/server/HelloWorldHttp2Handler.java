@@ -97,6 +97,9 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
             byte[] bytes = Files.readAllBytes(Paths.get(url.toURI()));
             ByteBuf buf = Unpooled.wrappedBuffer(bytes);
             Http2Headers headers = new DefaultHttp2Headers().status(OK.codeAsText());
+            headers.add("cache-control", "public, max-age=31536000");
+            headers.add("accept-ranges", "bytes");
+            headers.add("last-modified", "Fri, 16 Feb 2018 14:17:37 GMT");
             encoder().writeHeaders(ctx, streamId, headers, 0, false, ctx.newPromise());
             encoder().writeData(ctx, streamId, buf, 0, true, ctx.newPromise());
         } catch (URISyntaxException | IOException e) {
@@ -127,6 +130,19 @@ public final class HelloWorldHttp2Handler extends Http2ConnectionHandler impleme
                 }
             } catch (URISyntaxException e) {
                 e.printStackTrace();
+            }
+            if (path.equals("index.html")) {
+                for (int i = 0; i < 19; i++) {
+                    String image = String.format("image/tile-%d.png", i);
+                    int promiseId = connection().local().incrementAndGetNextStreamId();
+                    Http2Headers promiseHeader = new DefaultHttp2Headers();
+                    promiseHeader.scheme(HttpScheme.HTTPS.name()).path("/" + image)
+                            .add(":method", "GET")
+                            .add(":authority", "localhost:8443");
+                    encoder().writePushPromise(ctx, streamId, promiseId, promiseHeader, 0, ctx.channel().newPromise());
+                    sendFileResponse(ctx, promiseId, getClass().getClassLoader().getResource(image));
+                    flush(ctx);
+                }
             }
             if (filePath != null && Files.exists(filePath) && Files.isRegularFile(filePath)) {
                 sendFileResponse(ctx, streamId, url);
